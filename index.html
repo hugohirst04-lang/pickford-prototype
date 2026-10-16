@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en-AU">
+<html lang="en-AU" data-mode="free">
 <meta charset="utf-8">
 <title>Pickford Queue Demo</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -371,6 +371,11 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:16p
   .dev.tab .fit{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;border-radius:16px}
   .dev.tab .lbl::after{content:"Swipe sideways to see all of it";margin-left:auto;font-size:12px;color:var(--cobalt)}
 }
+/* free-play mode (public prototype link): no guided walkthrough */
+.freebar{display:none;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 16px;font:500 14px/1.4 var(--body);color:var(--ink-2)}
+.freebar b{color:var(--ink)}
+html[data-mode=free] .guide{display:none}
+html[data-mode=free] .freebar{display:flex}
 /* film mode for the recorded walkthrough */
 body.film{overflow:hidden;background-size:26px 26px}
 body.film .wrap{max-width:none;height:100%;box-sizing:border-box;padding:30px 56px 26px;display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:20px}
@@ -391,6 +396,8 @@ body.film .stage{min-height:0}
       <span style="--c:#4E6B2E"><i></i>Ethan</span><span style="--c:#E06A1B"><i></i>Hugo</span><span style="--c:#D2504F"><i></i>Huon</span><span style="--c:#2F5DA8"><i></i>Nicole</span><span style="--c:#1F8C8C"><i></i>Jasline</span><span style="--c:#7A45B8"><i></i>Harry</span>
     </div>
   </header>
+
+  <section class="freebar"><span><b>Tap anything.</b> Register a script on the staff tablet, open the text on Priya&rsquo;s phone, then move it through the board.</span><button class="pq-btn ghost sm" id="freeReset">Start over</button></section>
 
   <section class="guide" aria-live="polite">
     <div class="dots" id="dots"></div>
@@ -726,6 +733,8 @@ window.PQ={STAGES,createSim,mountTablet,mountPhone,makeCursor,typeInto,sleep,ic,
 (function(){
 const {createSim,mountTablet,mountPhone,makeCursor,typeInto,sleep,ic}=PQ;
 const FILM=location.hash==='#film';
+const FREE=document.documentElement.dataset.mode==='free'||location.hash==='#free';
+if(FREE)document.documentElement.dataset.mode='free';
 if(FILM) document.body.classList.add('film');
 
 /* fit devices to their columns */
@@ -783,7 +792,7 @@ function ringTo(r,box,el){if(!el){r.classList.remove('on');return}
   const s=box.getBoundingClientRect(),k=s.width/box.offsetWidth||1,e=el.getBoundingClientRect();
   if(!e.width){r.classList.remove('on');return}
   r.style.left=((e.left-s.left)/k-6)+'px';r.style.top=((e.top-s.top)/k-6)+'px';r.style.width=(e.width/k+12)+'px';r.style.height=(e.height/k+12)+'px';r.classList.add('on')}
-function tickRing(){const st=STEPS[step];let tgt=null;if(st&&!doneSet.has(step)&&!playing){const [w,el]=st.target();tgt={w,el}}
+function tickRing(){const st=FREE?null:STEPS[step];let tgt=null;if(st&&!doneSet.has(step)&&!playing){const [w,el]=st.target();tgt={w,el}}
   ringTo(ringT,natT,tgt&&tgt.w==='T'?tgt.el:null);ringTo(ringP,natP,tgt&&tgt.w==='P'?tgt.el:null)}
 
 function drawGuide(){
@@ -796,7 +805,7 @@ function drawGuide(){
   document.getElementById('back').disabled=step===0;document.getElementById('doit').disabled=doneSet.has(step);
 }
 function goStep(i){step=Math.max(0,Math.min(STEPS.length,i));const s=STEPS[step];if(s&&s.setup&&!doneSet.has(step))s.setup();drawGuide()}
-function check(){const s=STEPS[step];if(!s||doneSet.has(step))return;if(s.done()){doneSet.add(step);drawGuide();
+function check(){if(FREE)return;const s=STEPS[step];if(!s||doneSet.has(step))return;if(s.done()){doneSet.add(step);drawGuide();
   if(!playing&&!advancing){advancing=true;setTimeout(()=>{advancing=false;if(doneSet.has(step))goStep(step+1)},1600)}}}
 
 function init(){
@@ -821,6 +830,7 @@ document.getElementById('reset').onclick=()=>{if(!playing)init()};
 document.getElementById('doit').onclick=async()=>{if(playing)return;const s=STEPS[step];if(!s||doneSet.has(step))return;playing=true;await s.auto();await waitFor(()=>s.done(),6000);playing=false;check();
   const at=step;if(doneSet.has(at))setTimeout(()=>{if(!playing&&step===at)goStep(at+1)},1400)};
 document.getElementById('play').onclick=play;
+document.getElementById('freeReset').onclick=()=>init();
 setInterval(tickRing,250);
 init();
 if(FILM){document.fonts.ready.then(()=>setTimeout(play,1200))}
